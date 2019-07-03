@@ -69,7 +69,7 @@ echo "### Build"
 buildctl build --frontend dockerfile.v0 \
       --local dockerfile=. \
       --local context=. \
-      --exporter type=image \
+      --exporter image \
       --exporter-opt name=docker.io/${DOCKER_USER}/${DOCKER_REPONAME}:${DOCKER_TAG} \
       --exporter-opt push=true \
       --opt platform=$platforms \
