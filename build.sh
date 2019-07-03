@@ -66,11 +66,11 @@ echo "### Build"
 buildctl build --frontend dockerfile.v0 \
       --local dockerfile=. \
       --local context=. \
-      --exporter image \
+      --output type=image \
       --exporter-opt name=docker.io/${DOCKER_USERNAME}/${DOCKER_REPONAME}:${DOCKER_TAG} \
       --exporter-opt push=true \
-      --frontend-opt platform=$platforms \
-      --frontend-opt filename=${DOCKERFILE} \
+      --opt platform=$platforms \
+      --opt filename=${DOCKERFILE} \
       --opt build-arg:BUILD_DATE=${BUILD_DATE} \
       --opt build-arg:VCS_REF=${VCS_REF} \
       --opt build-arg:VERSION=${VERSION}
