@@ -67,8 +67,8 @@ buildctl build --frontend dockerfile.v0 \
       --local dockerfile=. \
       --local context=. \
       --output type=image \
-      --exporter-opt name=docker.io/${DOCKER_USERNAME}/${DOCKER_REPONAME}:${DOCKER_TAG} \
-      --exporter-opt push=true \
+      --exporter-opt name=${BUILD_TAG} \
+      --exporter-opt push=false \
       --opt platform=$platforms \
       --opt filename=${DOCKERFILE} \
       --opt build-arg:BUILD_DATE=${BUILD_DATE} \
