@@ -18,7 +18,7 @@ QUAY_USERNAME=${QUAY_USERNAME:-librenms}
 QUAY_REPONAME=${QUAY_REPONAME:-librenms}
 QUAY_LOGIN=${QUAY_LOGIN:-librenms+travis}
 
-ARCHITECTURES="arm arm64 amd64"
+ARCHITECTURES="arm amd64"
 
 for arch in $ARCHITECTURES
 do
