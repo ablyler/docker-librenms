@@ -18,6 +18,16 @@ QUAY_USERNAME=${QUAY_USERNAME:-librenms}
 QUAY_REPONAME=${QUAY_REPONAME:-librenms}
 QUAY_LOGIN=${QUAY_LOGIN:-librenms+travis}
 
+ARCHITECTURES="arm arm64 amd64"
+
+for arch in $ARCHITECTURES
+do
+# Build for all architectures and push manifest
+  platforms="linux/$arch,$platforms"
+done
+
+platforms=${platforms::-1}
+
 # Check local or travis
 BRANCH=${TRAVIS_BRANCH:-local}
 if [[ ${TRAVIS_PULL_REQUEST} == "true" ]]; then
@@ -53,11 +63,17 @@ echo
 
 # Build
 echo "### Build"
-docker build \
-  --build-arg BUILD_DATE=${BUILD_DATE} \
-  --build-arg VCS_REF=${VCS_REF} \
-  --build-arg VERSION=${VERSION} \
-  -t ${BUILD_TAG} -f ${DOCKERFILE} ${BUILD_WORKINGDIR}
+buildctl build --frontend dockerfile.v0 \
+      --local dockerfile=. \
+      --local context=. \
+      --exporter image \
+      --exporter-opt name=docker.io/${DOCKER_USERNAME}/${DOCKER_REPONAME}:${DOCKER_TAG} \
+      --exporter-opt push=true \
+      --frontend-opt platform=$platforms \
+      --frontend-opt filename=${DOCKERFILE} \
+      --opt build-arg:BUILD_DATE=${BUILD_DATE} \
+      --opt build-arg:VCS_REF=${VCS_REF} \
+      --opt build-arg:VERSION=${VERSION}
 echo
 
 echo "### Test"
