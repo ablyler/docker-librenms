@@ -29,7 +29,7 @@ done
 platforms=${platforms::-1}
 
 # Login into docker
-docker login --username $DOCKER_USER --password $DOCKER_PASSWORD
+docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 
 # Check local or travis
 BRANCH=${TRAVIS_BRANCH:-local}
