@@ -1,6 +1,7 @@
 # sudo for docker
 sudo: required
 dist: xenial
+language: bash
 
 services:
   - docker
