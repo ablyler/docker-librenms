@@ -28,6 +28,9 @@ done
 
 platforms=${platforms::-1}
 
+# Login into docker
+docker login --username $DOCKER_USER --password $DOCKER_PASSWORD
+
 # Check local or travis
 BRANCH=${TRAVIS_BRANCH:-local}
 if [[ ${TRAVIS_PULL_REQUEST} == "true" ]]; then
@@ -66,9 +69,9 @@ echo "### Build"
 buildctl build --frontend dockerfile.v0 \
       --local dockerfile=. \
       --local context=. \
-      --output type=image \
-      --exporter-opt name=${BUILD_TAG} \
-      --exporter-opt push=false \
+      --exporter type=image \
+      --exporter-opt name=docker.io/${DOCKER_USER}/${DOCKER_REPONAME}:${DOCKER_TAG} \
+      --exporter-opt push=true \
       --opt platform=$platforms \
       --opt filename=${DOCKERFILE} \
       --opt build-arg:BUILD_DATE=${BUILD_DATE} \
@@ -76,75 +79,4 @@ buildctl build --frontend dockerfile.v0 \
       --opt build-arg:VERSION=${VERSION}
 echo
 
-echo "### Test"
-docker rm -f ${PROJECT} ${PROJECT}-db > /dev/null 2>&1 || true
-docker network rm ${PROJECT} > /dev/null 2>&1 || true
-docker network create -d bridge ${PROJECT}
-docker run -d --network=${PROJECT} --name ${PROJECT}-db --hostname ${PROJECT}-db \
-  -e "MYSQL_ALLOW_EMPTY_PASSWORD=yes" \
-  -e "MYSQL_DATABASE=librenms" \
-  -e "MYSQL_USER=librenms" \
-  -e "MYSQL_PASSWORD=asupersecretpassword" \
-  mariadb:10.2 \
-  mysqld --sql-mode= --innodb-file-per-table=1 --lower-case-table-names=0
-docker run -d --network=${PROJECT} --link ${PROJECT}-db \
-  -e "DB_HOST=${PROJECT}-db" \
-  -e "DB_NAME=librenms" \
-  -e "DB_USER=librenms" \
-  -e "DB_PASSWORD=asupersecretpassword" \
-  --name ${PROJECT} ${BUILD_TAG}
-echo
-
-echo "### Waiting for ${PROJECT} to be up..."
-TIMEOUT=$((SECONDS + RUNNING_TIMEOUT))
-while read LOGLINE; do
-  echo ${LOGLINE}
-  if [[ ${LOGLINE} == *"${RUNNING_LOG_CHECK}"* ]]; then
-    echo "Container up!"
-    break
-  fi
-  if [[ $SECONDS -gt ${TIMEOUT} ]]; then
-    >&2 echo "ERROR: Failed to run ${PROJECT} container"
-    docker rm -f ${PROJECT} > /dev/null 2>&1 || true
-    exit 1
-  fi
-done < <(docker logs -f ${PROJECT} 2>&1)
-echo
-
-CONTAINER_STATUS=$(docker container inspect --format "{{.State.Status}}" ${PROJECT})
-if [[ ${CONTAINER_STATUS} != "running" ]]; then
-  >&2 echo "ERROR: Container ${PROJECT} returned status '$CONTAINER_STATUS'"
-  docker rm -f ${PROJECT} > /dev/null 2>&1 || true
-  exit 1
-fi
-docker rm -f ${PROJECT} > /dev/null 2>&1 || true
-echo
-
-if [ "${VERSION}" == "local" -o "${TRAVIS_PULL_REQUEST}" == "true" ]; then
-  echo "INFO: This is a PR or a local build, skipping push..."
-  exit 0
-fi
-if [[ ! -z ${DOCKER_PASSWORD} ]]; then
-  echo "### Push to Docker Hub..."
-  echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_LOGIN" --password-stdin > /dev/null 2>&1
-  if [ "${DOCKER_TAG}" == "latest" -a "${PUSH_LATEST}" == "true" ]; then
-    docker tag ${BUILD_TAG} ${DOCKER_USERNAME}/${DOCKER_REPONAME}:${DOCKER_TAG}
-  fi
-  if [[ "${VERSION}" != "latest" ]]; then
-    docker tag ${BUILD_TAG} ${DOCKER_USERNAME}/${DOCKER_REPONAME}:${VERSION}
-  fi
-  docker push ${DOCKER_USERNAME}/${DOCKER_REPONAME}
-  echo
-fi
-if [[ ! -z ${QUAY_PASSWORD} ]]; then
-  echo "### Push to Quay..."
-  echo "$QUAY_PASSWORD" | docker login quay.io --username "$QUAY_LOGIN" --password-stdin > /dev/null 2>&1
-  if [ "${DOCKER_TAG}" == "latest" -a "${PUSH_LATEST}" == "true" ]; then
-    docker tag ${BUILD_TAG} quay.io/${QUAY_USERNAME}/${QUAY_REPONAME}:${DOCKER_TAG}
-  fi
-  if [[ "${VERSION}" != "latest" ]]; then
-    docker tag ${BUILD_TAG} quay.io/${QUAY_USERNAME}/${QUAY_REPONAME}:${VERSION}
-  fi
-  docker push quay.io/${QUAY_USERNAME}/${QUAY_REPONAME}
-  echo
-fi
+wait
